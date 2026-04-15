@@ -1,0 +1,33 @@
+# Vercel deployment configuration
+{
+  "version": 2,
+  "name": "cse-predictor-mcp",
+  "builds": [
+    {
+      "src": "api/mcp.ts",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/health.ts",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/mcp",
+      "dest": "/api/mcp"
+    },
+    {
+      "src": "/health",
+      "dest": "/api/health"
+    },
+    {
+      "src": "/",
+      "dest": "/api/info"
+    }
+  ],
+  "env": {
+    "CSE_PREDICTION_THRESHOLD": "0.8",
+    "CSE_HISTORY_DAYS": "365"
+  }
+}

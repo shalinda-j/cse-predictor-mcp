@@ -1,0 +1,44 @@
+# Docker Compose for CSE Predictor MCP Server
+# Run: docker-compose up -d
+
+version: '3.8'
+
+services:
+  cse-predictor:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cse-predictor-mcp
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - CSE_PREDICTION_THRESHOLD=0.8
+      - CSE_REFRESH_INTERVAL=30
+      - CSE_HISTORY_DAYS=365
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # Optional: Add nginx reverse proxy
+  nginx:
+    image: nginx:alpine
+    container_name: cse-predictor-proxy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - cse-predictor
+    restart: unless-stopped
+    profiles:
+      - production
