@@ -3,12 +3,11 @@
   "name": "cse-predictor-mcp",
   "public": true,
   "framework": null,
-  "builds": [
-    {
-      "src": "api/**/*.ts",
-      "use": "@vercel/node"
+  "functions": {
+    "api/**/*.ts": {
+      "runtime": "@vercel/node@5"
     }
-  ],
+  },
   "routes": [
     { "src": "/mcp", "dest": "/api/index.ts" },
     { "src": "/health", "dest": "/api/health.ts" },
@@ -21,7 +20,7 @@
       "headers": [
         { "key": "Access-Control-Allow-Origin", "value": "*" },
         { "key": "Access-Control-Allow-Methods", "value": "GET,POST,OPTIONS" },
-        { "key": "Access-Control-Allow-Headers", "value": "Content-Type" }
+        { "key": "Access-Control-Allow-Headers", "value": "Content-Type, Accept" }
       ]
     }
   ]
