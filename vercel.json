@@ -2,7 +2,6 @@
   "version": 2,
   "name": "cse-predictor-mcp",
   "public": true,
-  "framework": null,
   "functions": {
     "api/**/*.ts": {
       "runtime": "@vercel/node@5"
@@ -12,7 +11,8 @@
     { "src": "/mcp", "dest": "/api/index.ts" },
     { "src": "/health", "dest": "/api/health.ts" },
     { "handle": "filesystem" },
-    { "src": "/(.*)", "dest": "/api/index.ts" }
+    { "src": "/api/(.*)", "dest": "/api/$1.ts" },
+    { "src": "/(.*)", "dest": "/$1" }
   ],
   "headers": [
     {
