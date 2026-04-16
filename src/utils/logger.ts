@@ -1,5 +1,6 @@
-﻿/**
+/**
  * Logger module for CSE Predictor MCP Server
+ * All logs go to stderr to avoid interfering with MCP JSON-RPC on stdout
  */
 
 import { config } from './config.js';
@@ -37,18 +38,9 @@ class Logger {
       return;
     }
     
+    // ALL logs go to stderr (stdout is reserved for MCP JSON-RPC)
     const output = JSON.stringify(entry);
-    
-    switch (level) {
-      case 'error':
-        console.error(output);
-        break;
-      case 'warn':
-        console.warn(output);
-        break;
-      default:
-        console.log(output);
-    }
+    process.stderr.write(output + '\n');
   }
   
   debug(message: string, data?: unknown): void {
