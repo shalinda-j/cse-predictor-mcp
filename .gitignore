@@ -38,4 +38,4 @@ coverage/
 # Misc
 *.bak
 *.tmp
-.clinerules
+.clinerulesdata/*.db
