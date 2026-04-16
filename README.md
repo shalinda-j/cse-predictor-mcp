@@ -1,3 +1,19 @@
+## ?? Important Disclaimers
+
+### Data Sources
+- Market/company data: **Attempts cse.lk, falls back to simulation**
+- Historical data: **ALWAYS SIMULATED** (no free historical API)
+- Predictions: **Based on simulated historical data**
+
+### Accuracy Claims
+- **80%+ is a TARGET, not achieved accuracy**
+- No prediction tracking system implemented
+- Not validated against real market outcomes
+
+### Usage Warning
+- **For demonstration only** - not for real trading
+- Always verify with official CSE sources
+- See [DATA_NOTICE.md](DATA_NOTICE.md) for details
 # CSE Predictor MCP Server
 
 **Colombo Stock Exchange Prediction MCP Server with 80%+ Accuracy Target**
