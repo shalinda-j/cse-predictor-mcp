@@ -1,21 +1,28 @@
-{
+﻿{
   "version": 2,
   "name": "cse-predictor-mcp",
   "public": true,
-  "cleanUrls": true,
+  "framework": null,
+  "builds": [
+    {
+      "src": "api/**/*.ts",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    { "src": "/mcp", "dest": "/api/index.ts" },
+    { "src": "/health", "dest": "/api/health.ts" },
+    { "handle": "filesystem" },
+    { "src": "/(.*)", "dest": "/api/index.ts" }
+  ],
   "headers": [
     {
       "source": "/api/(.*)",
       "headers": [
         { "key": "Access-Control-Allow-Origin", "value": "*" },
-        { "key": "Access-Control-Allow-Methods", "value": "GET,POST,OPTIONS" }
+        { "key": "Access-Control-Allow-Methods", "value": "GET,POST,OPTIONS" },
+        { "key": "Access-Control-Allow-Headers", "value": "Content-Type" }
       ]
     }
-  ],
-  "routes": [
-    { "src": "/mcp", "dest": "/api/index" },
-    { "src": "/health", "dest": "/api/health" },
-    { "handle": "filesystem" },
-    { "src": "/(.*)", "dest": "/api/index" }
   ]
 }
