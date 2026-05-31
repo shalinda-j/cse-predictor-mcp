@@ -94,6 +94,33 @@ Run the tests (offline — they mock the CSE API):
 npm test
 ```
 
+### Verify it works on real data ✅
+
+The definitive "does it actually work on live CSE data?" check. Run it from a
+machine/network that can reach `https://www.cse.lk`:
+
+```bash
+npm run verify
+```
+
+It POSTs to every endpoint the server depends on (indices, trade summary, symbol
+resolution, company info, historical chart data), parses the responses and prints
+a PASS/FAIL report with sample values, exiting non-zero on any failure:
+
+```
+Verifying live CSE data via https://www.cse.lk/api
+
+  ✓ aspiData (ASPI index) — value=12345.67 change=21.77 (0.18%)
+  ✓ tradeSummary (all securities) — 290 securities, e.g. JKH.N0000 @ 201.5
+  ✓ companyInfoSummery — JKH.N0000 price=201.5 id=234 marketCap=...
+  ✓ companyChartDataByStock (history) — 248 OHLC points, latest 2026-05-30 close=201.5
+
+PASS — the server is serving REAL CSE data end to end. ✅
+```
+
+> If the CSE market is closed, intraday values can be 0 and some checks may warn —
+> re-run during market hours (weekdays, ~09:30–14:30 Sri Lanka time) for a full pass.
+
 ---
 
 ## Configuration

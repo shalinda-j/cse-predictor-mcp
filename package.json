@@ -14,6 +14,7 @@
     "dev": "tsx src/index.ts",
     "test": "vitest run",
     "test:watch": "vitest",
+    "verify": "tsx src/verify.ts",
     "lint": "eslint src/**/*.ts",
     "clean": "rimraf dist",
     "inspect": "npx @modelcontextprotocol/inspector node dist/index.js"

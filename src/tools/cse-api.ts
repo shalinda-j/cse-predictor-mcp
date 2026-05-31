@@ -133,7 +133,9 @@ export class CSEApiClient {
       });
 
       if (!res.ok) {
-        throw new Error(`CSE API ${endpoint} returned HTTP ${res.status} ${res.statusText}`);
+        const body = await res.text().catch(() => '');
+        const hint = body ? ` — ${body.slice(0, 120)}` : '';
+        throw new Error(`CSE API ${endpoint} returned HTTP ${res.status} ${res.statusText}${hint}`);
       }
       return (await res.json()) as T;
     } catch (error) {
@@ -229,6 +231,7 @@ export class CSEApiClient {
     const raw = await this.post<Record<string, unknown>>('companyInfoSummery', { symbol });
     const info = (raw.reqSymbolInfo ?? raw.symbolInfo ?? raw) as Record<string, unknown>;
     const logo = (raw.reqLogo ?? {}) as Record<string, unknown>;
+    const betaInfo = (raw.reqSymbolBetaInfo ?? {}) as Record<string, unknown>;
     const price = num(info.lastTradedPrice, info.price, info.lastTrade);
     const change = num(info.change, info.changeValue);
     const prevClose = num(info.previousClose, info.closingPrice, price - change);
@@ -237,6 +240,8 @@ export class CSEApiClient {
       changePercent = (change / prevClose) * 100;
     }
     return {
+      // The numeric stock id is exposed via reqLogo.id in the CSE response
+      // (reqSymbolInfo does not carry it); fall back to other shapes.
       id: num(info.id, info.stockId, logo.id),
       symbol: str(info.symbol, symbol),
       name: str(info.name, logo.name, info.companyName),
@@ -247,7 +252,7 @@ export class CSEApiClient {
       low: num(info.lowTrade, info.low),
       previousClose: prevClose,
       marketCap: num(info.marketCap, info.marketCapitalization),
-      beta: num(info.betaValue, info.beta),
+      beta: num(betaInfo.betaValueSPSL, betaInfo.betaValue, info.betaValue, info.beta),
       sector: str(info.sectorName, info.sector) || undefined
     };
   }
