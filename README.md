@@ -1,317 +1,245 @@
-## ?? Important Disclaimers
-
-### Data Sources
-- Market/company data: **Attempts cse.lk, falls back to simulation**
-- Historical data: **ALWAYS SIMULATED** (no free historical API)
-- Predictions: **Based on simulated historical data**
-
-### Accuracy Claims
-- **80%+ is a TARGET, not achieved accuracy**
-- No prediction tracking system implemented
-- Not validated against real market outcomes
-
-### Usage Warning
-- **For demonstration only** - not for real trading
-- Always verify with official CSE sources
-- See [DATA_NOTICE.md](DATA_NOTICE.md) for details
 # CSE Predictor MCP Server
 
-**Colombo Stock Exchange Prediction MCP Server with 80%+ Accuracy Target**
+**A Model Context Protocol (MCP) server for the Colombo Stock Exchange (CSE), powered by real, live market data.**
 
 ![MCP](https://img.shields.io/badge/MCP-Model%20Context%20Protocol-blue)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue)
 ![Node.js](https://img.shields.io/badge/Node.js-18+-green)
 ![License](https://img.shields.io/badge/License-MIT-yellow)
 
-A production-ready Model Context Protocol (MCP) server for the Colombo Stock Exchange (CSE) that provides:
+This server connects AI assistants (Claude Desktop, Cursor, or any MCP client) to
+**live Colombo Stock Exchange data** and a set of transparent technical-analysis
+tools. It can be self-hosted by anyone.
 
-- 🔄 **Real-time Market Data** - ASPI, S&P SL20 indices, turnover
-- 📊 **Technical Analysis** - RSI, MACD, SMA, EMA, Bollinger Bands, Volume analysis
-- 🎯 **Stock Predictions** - Multi-model ensemble with 80%+ accuracy target
-- 🔍 **Stock Screening** - Find investment opportunities by criteria
-- 📈 **Accuracy Tracking** - Monitor prediction performance
+- 🔄 **Live market data** — ASPI & S&P SL20 indices, turnover, market status
+- 🏢 **Live company quotes** — last price, change, day high/low for any listed stock
+- 📊 **Technical analysis** — RSI, MACD, SMA, EMA, Bollinger Bands, volume, trend
+- 🧭 **Directional outlook** — a 4-model technical ensemble (bullish/bearish/neutral)
+- 🔍 **Stock screening** — rank all traded securities by live quote criteria
+- 📈 **Honest accuracy tracking** — predictions are stored and scored against real outcomes
 
----
+> **Where the data comes from:** all data is fetched live from the Colombo Stock
+> Exchange's public JSON API (`https://www.cse.lk/api`) — the same endpoints the
+> official cse.lk website uses. **There is no simulated, fake, or fallback data
+> anywhere in this project.** If the exchange is unreachable, tools return an
+> honest error instead of made-up numbers.
 
-## Features
-
-### Technical Indicators
-
-| Indicator | Period | Signal |
-|-----------|--------|--------|
-| **RSI** | 14 | Oversold (<30), Overbought (>70) |
-| **MACD** | 12/26/9 | Bullish/Bearish crossover |
-| **SMA** | 20/50/200 | Golden/Death cross |
-| **EMA** | 12/26 | Trend direction |
-| **Bollinger Bands** | 20 | Overbought/Oversold zones |
-| **Volume Analysis** | 20 | High/Normal/Low relative volume |
-
-### Prediction Models
-
-Four-model ensemble approach:
-
-1. **Trend Following Model** - SMA/EMA crossovers and trend direction
-2. **Momentum Oscillator Model** - RSI and MACD signals
-3. **Pattern Recognition Model** - Double bottom/top, breakout patterns
-4. **Sentiment Analysis Model** - Volume confirmation and overall signal
+> ⚠️ **Not financial advice.** This is a technical-analysis tool. Markets are
+> uncertain. Always verify with official CSE sources and consult a licensed
+> advisor before trading.
 
 ---
 
-## Installation
+## How it works
 
-### Prerequisites
-
-- Node.js 18+
-- npm or pnpm
-
-### Quick Start
-
-```bash
-# Clone the repository
-git clone https://github.com/shalinda-j/cse-predictor-mcp.git
-cd cse-predictor-mcp
-
-# Install dependencies
-npm install
-
-# Build the server
-npm run build
-
-# Run the server
-npm start
+```
+MCP client (Claude / Cursor)
+        │  tool call
+        ▼
+  CSE Predictor MCP Server
+        │
+        ├── CSEApiClient  ──►  https://www.cse.lk/api  (live JSON)
+        │      aspiData · snpData · tradeSummary · companyInfoSummery ·
+        │      companyChartDataByStock · marketStatus
+        │
+        ├── TechnicalAnalyzer  ──►  RSI / MACD / SMA / EMA / Bollinger / trend
+        ├── StockPredictor     ──►  weighted technical ensemble
+        └── PredictionStore (SQLite)  ──►  tracks predictions & real accuracy
 ```
 
-### Test with MCP Inspector
+A prediction is **not** a claim of accuracy. The reported `confidence` reflects how
+strongly the underlying technical models agree. Real, empirical accuracy is measured
+separately: every prediction is stored, and once its timeframe elapses you call
+`resolve_predictions` to score it against the actual market price.
+
+---
+
+## Prediction models
+
+The directional outlook is a weighted ensemble of four technical models, all
+computed from **real historical OHLC data**:
+
+1. **Trend Following** — SMA/EMA direction and golden/death crossovers
+2. **Momentum Oscillator** — RSI and MACD signals
+3. **Pattern Recognition** — double bottom/top and breakout detection
+4. **Sentiment** — volume confirmation of the overall signal
+
+Weights are tuned per timeframe (`short` / `medium` / `long`).
+
+---
+
+## Quick start
+
+### Prerequisites
+- Node.js 18+
+- A network that can reach `https://www.cse.lk` (the CSE site is reachable from Sri Lanka and most regions; some networks/regions may block it)
 
 ```bash
-npx @modelcontextprotocol/inspector node dist/index.js
+git clone https://github.com/shalinda-j/cse-predictor-mcp.git
+cd cse-predictor-mcp
+npm install
+npm run build
+npm start            # stdio MCP server
+```
+
+Try it with the MCP Inspector:
+
+```bash
+npm run inspect
+```
+
+Run the tests (offline — they mock the CSE API):
+
+```bash
+npm test
 ```
 
 ---
 
 ## Configuration
 
-### Environment Variables
+All configuration is optional and set via environment variables (see `.env.example`):
 
-Create a `.env` file based on `.env.example`:
-
-```env
-# Data refresh interval in minutes
-CSE_REFRESH_INTERVAL=30
-
-# Historical data retention in days
-CSE_HISTORY_DAYS=365
-
-# Prediction confidence threshold (0.8 = 80%)
-CSE_PREDICTION_THRESHOLD=0.8
-
-# Enable verbose logging
-CSE_VERBOSE_LOGGING=false
-
-# Data storage path
-CSE_DATA_PATH=./data
-```
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `CSE_API_URL` | `https://www.cse.lk/api` | CSE API base URL (override only if the CSE changes hosts) |
+| `CSE_REQUEST_TIMEOUT_MS` | `20000` | HTTP timeout for CSE API calls |
+| `CSE_HISTORY_DAYS` | `365` | Trading days of history to use for analysis |
+| `CSE_DATA_PATH` | `./data` | Where the SQLite tracking database is stored |
+| `CSE_VERBOSE_LOGGING` | `false` | Enable debug logging |
 
 ---
 
-## MCP Tools
+## MCP tools
 
-### 1. `fetch_market_data`
+| Tool | Description |
+|------|-------------|
+| `fetch_market_data` | Live ASPI, S&P SL20, turnover and market status |
+| `get_company_data` | Live quote for a company (ticker or full symbol) |
+| `analyze_stock` | Technical indicators on real price history |
+| `predict_stock` | Directional outlook (tracked for accuracy) |
+| `predict_market` | Outlook for ASPI / S&P SL20 from recorded daily index history |
+| `screen_stocks` | Rank all traded securities by a live-quote criterion |
+| `get_accuracy_report` | Real measured accuracy of past predictions |
+| `resolve_predictions` | Score pending predictions against current prices |
 
-Fetch current market data from Colombo Stock Exchange.
+### Symbols
 
-**Parameters:**
-- `type`: `all` | `asi` | `spx` | `turnover`
+You can use a short ticker (`JKH`, `COMB`) or a full CSE symbol (`JKH.N0000`).
+Short tickers are resolved against the live security list; when multiple share
+classes exist the voting/ordinary class (`.N0000`) is preferred.
 
-**Example:**
+### Example: `predict_stock`
+
+Request:
 ```json
-{ "type": "all" }
+{ "symbol": "JKH", "timeframe": "medium" }
 ```
 
----
-
-### 2. `get_company_data`
-
-Get detailed data for a specific company.
-
-**Parameters:**
-- `symbol`: Stock symbol (e.g., COMB, JKH, NDB)
-- `includeHistory`: Include historical prices (boolean)
-
----
-
-### 3. `analyze_stock`
-
-Perform technical analysis on a stock.
-
-**Parameters:**
-- `symbol`: Stock symbol
-- `indicators`: Array of indicators (`rsi`, `macd`, `sma`, `ema`, `bb`, `volume`, `trend`, `all`)
-
----
-
-### 4. `predict_stock`
-
-Predict stock price trend with confidence score.
-
-**Parameters:**
-- `symbol`: Stock symbol
-- `timeframe`: `short` (1-5 days) | `medium` (1-4 weeks) | `long` (1-3 months)
-
-**Response:**
+Response (shape):
 ```json
 {
-  "symbol": "COMB",
+  "symbol": "JKH.N0000",
   "prediction": "bullish",
-  "confidence": 0.75,
-  "accuracyEstimate": 0.85,
-  "targetPrice": 125.5,
-  "priceRange": { "low": 118, "mid": 125.5, "high": 132 },
-  "reasoning": ["MACD shows bullish momentum", "Golden cross detected"],
-  "riskLevel": "low"
+  "confidence": 0.72,
+  "timeframe": "medium",
+  "currentPrice": 201.5,
+  "targetPrice": 209.6,
+  "priceRange": { "low": 198.1, "mid": 209.6, "high": 221.0 },
+  "reasoning": ["MACD shows bullish momentum", "Overall trend is upward"],
+  "riskLevel": "medium",
+  "predictionId": "pred_...",
+  "tracked": true,
+  "disclaimer": "Technical-analysis output only. Not financial advice. ..."
 }
 ```
 
----
-
-### 5. `predict_market`
-
-Get overall market prediction for ASPI and S&P SL20.
+> `predict_market` builds its index history from daily snapshots the server records
+> each time market data is fetched, so its outlook becomes available only after enough
+> trading days have been collected.
 
 ---
 
-### 6. `screen_stocks`
+## MCP resources
 
-Screen stocks based on criteria.
-
-**Parameters:**
-- `criteria`: `bullish` | `bearish` | `oversold` | `overbought` | `high_volume` | `breakout` | `all`
-- `limit`: Max results (1-50)
-
----
-
-### 7. `get_accuracy_report`
-
-Get prediction accuracy report.
-
-**Parameters:**
-- `period`: `week` | `month` | `quarter` | `year`
-
----
-
-## MCP Resources
-
-- `cse://market/overview` - Current market overview
-- `cse://companies/list` - List of CSE listed companies
-- `cse://models/info` - Prediction model information
+- `cse://market/overview` — live market overview
+- `cse://companies/list` — live list of traded companies
+- `cse://models/info` — model info + measured accuracy from the tracking DB
 
 ---
 
 ## Integration
 
-### Claude Desktop
+### Claude Desktop / Cursor
 
-Add to `claude_desktop_config.json`:
-
-```json
-{
-  "mcpServers": {
-    "cse-predictor": {
-      "command": "node",
-      "args": ["path/to/cse-predictor-mcp/dist/index.js"]
-    }
-  }
-}
-```
-
-### Cursor IDE
-
-Add to Cursor MCP settings:
+Add to your MCP config (`claude_desktop_config.json` or Cursor MCP settings):
 
 ```json
 {
   "mcpServers": {
     "cse-predictor": {
       "command": "node",
-      "args": ["path/to/cse-predictor-mcp/dist/index.js"]
+      "args": ["/absolute/path/to/cse-predictor-mcp/dist/index.js"]
     }
   }
 }
 ```
 
----
+### HTTP / remote hosting
 
-## Accuracy Metrics
+```bash
+node dist/server-http.js     # exposes POST /mcp and GET /health
+```
 
-| Metric | Value |
-|--------|-------|
-| **Overall Accuracy** | 82% |
-| **Short-term** | 78% |
-| **Medium-term** | 85% |
-| **Long-term** | 83% |
+A stateless serverless variant for Vercel lives in `api/` (no SQLite tracking there).
 
 ---
 
-## Project Structure
+## Project structure
 
 ```
 cse-predictor-mcp/
 ├── src/
-│   ├── index.ts           # MCP server entry
+│   ├── index.ts              # stdio MCP server entry
+│   ├── server-http.ts        # HTTP MCP server (Express)
 │   ├── tools/
-│   │   ├── data-fetcher.ts   # CSE data fetching
-│   │   ├── analysis.ts       # Technical analysis
-│   │   └── predictor.ts      # Prediction models
-│   ├── resources/
-│   │   └── cse-data.ts       # MCP resources
-│   └── utils/
-│       ├── config.ts         # Configuration
-│       └── logger.ts         # Logging
-├── dist/                   # Compiled output
-├── package.json
-├── tsconfig.json
-├── .env.example
+│   │   ├── cse-api.ts         # live CSE JSON API client
+│   │   ├── data-fetcher.ts    # market/company/history data (real, cached)
+│   │   ├── analysis.ts        # technical indicators
+│   │   └── predictor.ts       # technical ensemble + screening
+│   ├── resources/cse-data.ts  # MCP resources
+│   ├── database/prediction-store.ts  # SQLite prediction tracking
+│   └── utils/                 # config, logging
+├── api/                       # Vercel serverless endpoint
+├── tests/                     # offline tests (mocked CSE API)
 └── README.md
 ```
 
 ---
 
-## Development
+## A note on the CSE API
 
-```bash
-# Development mode
-npm run dev
+The endpoints under `https://www.cse.lk/api` are public but **not officially
+documented**, so field names are parsed defensively and may change without notice.
+If a tool stops returning data, the parsing in `src/tools/cse-api.ts` is the place
+to adjust. Community references:
+[GH0STH4CKER/Colombo-Stock-Exchange-CSE-API-Documentation](https://github.com/GH0STH4CKER/Colombo-Stock-Exchange-CSE-API-Documentation).
 
-# Build
-npm run build
-
-# Test
-npm run test
-
-# Inspect
-npm run inspect
-```
+Please use the API responsibly (this client caches results and identifies itself
+via User-Agent).
 
 ---
+
+## Contributing
+
+Issues and pull requests are welcome. This is open source under the MIT License.
 
 ## License
 
-MIT License
-
----
-
-## Author
-
-**Shalinda Jayasinghe**
-- GitHub: [@shalinda-j](https://github.com/shalinda-j)
-- Work360: [work360.lk](https://work360.lk)
-
----
+MIT — see [LICENSE](LICENSE).
 
 ## Disclaimer
 
-This is a prediction tool for educational purposes. Stock market predictions are inherently uncertain. Always do your own research before making investment decisions. Past accuracy does not guarantee future results.
-
----
-
-**Built with ❤️ for Sri Lanka's Stock Market**
+For research and educational use. Stock-market predictions are inherently uncertain;
+past results do not guarantee future outcomes. Nothing here is financial advice.
+Always do your own research.

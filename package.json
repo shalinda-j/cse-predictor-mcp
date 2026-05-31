@@ -1,7 +1,7 @@
 {
   "name": "cse-predictor-mcp-server",
   "version": "1.0.0",
-  "description": "MCP Server for Colombo Stock Exchange prediction with 80%+ accuracy target",
+  "description": "MCP server for the Colombo Stock Exchange — live market data and technical analysis. Not financial advice.",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -31,19 +31,14 @@
   "license": "MIT",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
-    "@types/express": "^5.0.6",
     "better-sqlite3": "^12.9.0",
-    "cheerio": "^1.0.0",
-    "csv-parse": "^5.5.6",
-    "date-fns": "^3.6.0",
+    "cors": "^2.8.5",
     "express": "^5.2.1",
-    "node-fetch": "^3.3.2",
-    "puppeteer": "^24.41.0",
-    "technicalindicators": "^3.0.0",
     "zod": "^3.24.0"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
     "@types/node": "^22.0.0",
     "@typescript-eslint/eslint-plugin": "^8.0.0",
     "@typescript-eslint/parser": "^8.0.0",

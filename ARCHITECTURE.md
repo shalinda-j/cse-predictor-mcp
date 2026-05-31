@@ -1,184 +1,92 @@
-# Self-Evolving MCP Architecture
+# Architecture
 
-## Overview
+The CSE Predictor MCP Server exposes live Colombo Stock Exchange data and
+technical-analysis tools over the Model Context Protocol. All data is real and
+fetched live; there is no simulated data.
 
-This MCP server implements a **Self-Evolving AI System** with:
-
-1. Memory Layer (Persistence)
-2. Self-Research Engine (Pattern Discovery)
-3. Self-Improvement Engine (Model Refinement)
-4. Dual Feedback Loop (Continuous Learning)
-5. Auto-Training (Automatic Updates)
-
-## Architecture
+## Data flow
 
 ```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                    SELF-EVOLVING MCP SERVER                              │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                          │
-│   ┌─────────────────────────────────────────────────────────────────┐   │
-│   │                     DUAL FEEDBACK LOOP                           │   │
-│   │                                                                  │   │
-│   │    ┌───────────────┐              ┌───────────────┐              │   │
-│   │    │ SELF-RESEARCH │ ─────────────→│ SELF-IMPROVE  │              │   │
-│   │    │               │              │               │              │   │
-│   │    │ • Pattern     │  Patterns    │ • Weights     │              │   │
-│   │    │ • Correlation │              │ • Algorithms  │              │   │
-│   │    │ • Discovery   │              │ • Refinement  │              │   │
-│   │    │               │              │               │              │   │
-│   │    └───────┬───────┘              └───────┬───────┘              │   │
-│   │            │                              │                      │   │
-│   │            │      ┌───────────────┐       │                      │   │
-│   │            └──────│  MEMORY LAYER │───────┘                      │   │
-│   │                   │               │                              │   │
-│   │                   │ • History     │                              │   │
-│   │                   │ • Patterns    │                              │   │
-│   │                   │ • Learnings   │                              │   │
-│   │                   │ • Accuracy    │                              │   │
-│   │                   └───────┬───────┘                              │   │
-│   │                           │                                      │   │
-│   └───────────────────────────┼──────────────────────────────────────│   │
-│                               │                                      │   │
-│                               ↓                                      │   │
-│   ┌─────────────────────────────────────────────────────────────────┐   │
-│   │                     MCP SERVER                                   │   │
-│   │                                                                  │   │
-│   │   ┌─────────────┐   ┌─────────────┐   ┌─────────────┐           │   │
-│   │   │   Tools     │   │  Resources  │   │  Prompts    │           │   │
-│   │   │             │   │             │   │             │           │   │
-│   │   │ • predict   │   │ • memory    │   │ • research  │           │   │
-│   │   │ • analyze   │   │ • patterns  │   │ • improve   │           │   │
-│   │   │ • screen    │   │ • accuracy  │   │ • train     │           │   │
-│   │   └─────────────┘   └─────────────┘   └─────────────┘           │   │
-│   │                                                                  │   │
-│   └──────────────────────────────┬──────────────────────────────────┘   │
-│                                  │                                      │
-│                                  ↓                                      │
-│   ┌─────────────────────────────────────────────────────────────────┐   │
-│   │                   IDE / CLI CONNECTION                           │   │
-│   │                                                                  │   │
-│   │   ┌─────────────┐   ┌─────────────┐   ┌─────────────┐           │   │
-│   │   │ Cursor IDE  │   │ Claude      │   │ MCP Client  │           │   │
-│   │   │             │   │ Desktop     │   │ (Any)       │           │   │
-│   │   └─────────────┘   └─────────────┘   └─────────────┘           │   │
-│   │                                                                  │   │
-│   └─────────────────────────────────────────────────────────────────┘   │
-│                                                                          │
-└─────────────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│  MCP client  (Claude Desktop · Cursor · any MCP client)            │
+└───────────────────────────────┬────────────────────────────────────┘
+                                 │ JSON-RPC (stdio or HTTP)
+                                 ▼
+┌──────────────────────────────────────────────────────────────────┐
+│                     CSE Predictor MCP Server                       │
+│                                                                    │
+│  Tools:     fetch_market_data · get_company_data · analyze_stock   │
+│             predict_stock · predict_market · screen_stocks         │
+│             get_accuracy_report · resolve_predictions              │
+│  Resources: market/overview · companies/list · models/info         │
+│                                                                    │
+│   ┌──────────────┐   ┌────────────────┐   ┌──────────────────┐    │
+│   │ CSEDataFetcher│──►│ TechnicalAnalyzer│─►│ StockPredictor   │    │
+│   │  (+ 5m cache) │   │ RSI/MACD/SMA/... │  │ ensemble + screen │    │
+│   └──────┬───────┘   └────────────────┘   └──────────────────┘    │
+│          │                                          │              │
+│          │                                          ▼              │
+│          │                              ┌──────────────────────┐   │
+│          │                              │ PredictionStore       │   │
+│          │                              │ (SQLite tracking)     │   │
+│          │                              └──────────────────────┘   │
+└──────────┼─────────────────────────────────────────────────────────┘
+           │ HTTPS (form-encoded POST)
+           ▼
+   https://www.cse.lk/api
+   aspiData · snpData · marketStatus · tradeSummary ·
+   companyInfoSummery · companyChartDataByStock
 ```
 
 ## Components
 
-### 1. Memory Layer
+### `src/tools/cse-api.ts` — CSEApiClient
+A typed client for the CSE public JSON API. Handles requests (form-encoded POST,
+browser-like User-Agent, timeout), defensive response normalisation (field names
+are not officially documented), and ticker → full-symbol resolution
+(`JKH` → `JKH.N0000`).
 
-- **MEMORY.md** - Long-term curated memory
-- **memory/daily/*.md** - Daily logs with patterns
-- **memory/patterns/*.json** - Discovered patterns
-- **memory/learnings/*.json** - Model improvements
-- **memory/training/*.json** - Training data
+### `src/tools/data-fetcher.ts` — CSEDataFetcher
+The data layer. Provides market data, company quotes, all-securities lists and
+historical OHLC, with a 5-minute in-memory cache. Throws on failure — never
+returns fabricated data. Enforces a minimum history length for analysis.
 
-### 2. Self-Research Engine
+### `src/tools/analysis.ts` — TechnicalAnalyzer
+Computes RSI, MACD, SMA, EMA, Bollinger Bands, volume and trend indicators from
+real price history and produces a buy/sell/hold signal.
 
-- Analyzes prediction outcomes
-- Finds correlations between indicators
-- Discovers winning/losing patterns
-- Identifies market conditions
+### `src/tools/predictor.ts` — StockPredictor
+Combines four technical models (trend, momentum, pattern, sentiment) into a
+weighted ensemble to produce a bullish/bearish/neutral outlook. `confidence`
+measures model agreement, not historical accuracy. Also performs transparent,
+quote-based stock screening.
 
-### 3. Self-Improvement Engine
+### `src/database/prediction-store.ts` — PredictionStore
+SQLite store that records every prediction and (via `resolve_predictions`) scores
+it against the real later price, yielding honest, measured accuracy. Also stores
+daily index snapshots so `predict_market` can build a real index history over time.
 
-- Adjusts model weights based on accuracy
-- Refines prediction thresholds
-- Updates algorithm parameters
-- Improves signal generation
+## Entry points
 
-### 4. Auto-Training
+- `src/index.ts` — stdio MCP server (default; for Claude Desktop / Cursor)
+- `src/server-http.ts` — Express-based HTTP MCP server for remote hosting
+- `api/index.ts` — stateless Vercel serverless endpoint (no SQLite tracking)
 
-- Runs on schedule (heartbeat)
-- Processes new data continuously
-- Updates memory automatically
-- Trains models incrementally
+## Accuracy model
 
-## Workflow
+Predictions are stored when made and resolved later against actual prices. Accuracy
+is therefore *measured*, not asserted. Until predictions are resolved, the accuracy
+report says so honestly.
 
-### Daily Operation:
+## Experimental modules (not wired in)
 
-1. **8:00 AM** - Fetch market data
-2. **8:05 AM** - Run predictions
-3. **8:10 AM** - Store in memory
-4. **8:15 AM** - Research patterns
-5. **8:20 AM** - Improve models
-6. **8:25 AM** - Update memory
-7. **Throughout day** - Serve predictions to IDE/CLI
-8. **6:00 PM** - Daily summary
-9. **Daily review** - Accuracy report
+`src/memory/`, `src/research/`, `src/improvement/` and `src/dual/` contain an
+early, self-contained sketch of a self-improving/auto-tuning subsystem. It is **not
+connected to the running server** and does not affect any tool output. It is kept
+as a starting point for future work and may be completed or removed later.
 
-### Self-Improvement Cycle:
+## Possible future work
 
-```
-Prediction Made
-    ↓
-Outcome Recorded (after time passes)
-    ↓
-Was it correct?
-    ↓
-Yes → Strengthen pattern weights
-No → Reduce pattern weights
-    ↓
-Update Memory
-    ↓
-Model Improves
-    ↓
-Next Prediction Better
-```
-
-## Files Structure
-
-```
-D:\MCP-000/
-├── src/
-│   ├── index.ts
-│   ├── server-http.ts
-│   ├── memory/
-│   │   ├── memory-manager.ts     # Memory CRUD
-│   │   ├── pattern-store.ts      # Pattern storage
-│   │   ├── learning-store.ts     # Learnings storage
-│   │   └── training-loop.ts      # Auto-training
-│   ├── research/
-│   │   ├── pattern-researcher.ts # Pattern discovery
-│   │   ├── correlation-engine.ts # Correlation analysis
-│   │   ├── outcome-tracker.ts    # Track prediction outcomes
-│   │   └── research-scheduler.ts # Schedule research
-│   ├── improvement/
-│   │   ├── model-improver.ts     # Improve models
-│   │   ├── weight-adjuster.ts    # Adjust weights
-│   │   ├── threshold-refiner.ts  # Refine thresholds
-│   │   └── improvement-loop.ts   # Improvement cycle
-│   ├── dual/
-│   │   ├── feedback-loop.ts      # Research ↔ Improvement
-│   │   ├── auto-trainer.ts       # Auto-training
-│   │   └── evolution-engine.ts   # System evolution
-│   ├── tools/
-│   │   └── ... (existing)
-│   └── utils/
-│   │   └── ... (existing)
-├── memory/
-│   ├── daily/                    # Daily logs
-│   ├── patterns/                 # Discovered patterns
-│   ├── learnings/                # Model improvements
-│   ├── training/                 # Training data
-│   ├── predictions/              # Prediction history
-│   └── outcomes/                 # Outcome tracking
-└── ...
-```
-
-## Expected Outcome
-
-After implementing this system:
-
-1. **Memory automatically grows** with every prediction
-2. **Models continuously improve** based on outcomes
-3. **Patterns automatically discovered** from data
-4. **Accuracy increases over time** (target: 85%+)
-5. **IDE/CLI always connected** with latest models
-6. **No manual intervention needed** - fully autonomous
+- Backtesting against historical OHLC
+- Scheduled automatic resolution of pending predictions
+- Wiring (or removing) the experimental self-improvement modules

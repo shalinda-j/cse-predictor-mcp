@@ -1,45 +1,46 @@
-# CSE Predictor MCP Server - Data & Accuracy Notice
+# CSE Predictor MCP Server — Data & Accuracy Notice
 
-## Data Sources
+## Data sources
 
-| Data Type | Source | Status |
-|-----------|--------|--------|
-| **Market Data** | cse.lk | Attempts real fetch, falls back to simulation |
-| **Company Data** | cse.lk | Attempts real fetch, falls back to simulation |
-| **Historical Data** | None | **ALWAYS SIMULATED** - no free API available |
-| **All Companies List** | Hardcoded | 15 common symbols (COMB, JKH, NDB, etc.) |
+Every data point served by this project is fetched **live** from the Colombo Stock
+Exchange public JSON API (`https://www.cse.lk/api`). **There is no simulated, fake,
+or fallback data.** If the exchange cannot be reached, tools return an honest error.
 
-## Accuracy Claims
+| Data type | Source | How it's obtained |
+|-----------|--------|-------------------|
+| Indices (ASPI, S&P SL20) | `cse.lk/api/aspiData`, `snpData` | Live |
+| Market status & turnover | `cse.lk/api/marketStatus`, `tradeSummary` | Live |
+| Company quote | `cse.lk/api/companyInfoSummery` | Live |
+| All traded securities | `cse.lk/api/tradeSummary` | Live |
+| Historical OHLC | `cse.lk/api/companyChartDataByStock` | Live |
+| Index history | Daily snapshots recorded by the server | Real, accumulated over time |
 
-**The 80%+ accuracy is a TARGET, not an achieved metric.**
+## Accuracy
 
-| Metric | Status |
-|--------|--------|
-| Target Accuracy | 80%+ |
-| Achieved Accuracy | **Not tracked** |
-| Prediction Tracking | **Not implemented** |
-| Historical Validation | **Not available** |
+There are **no fabricated accuracy numbers** in this project. Accuracy is measured
+empirically:
 
-## How to Achieve Real Accuracy
+1. Every `predict_stock` call is stored in a local SQLite database with a timestamp.
+2. After the prediction's timeframe elapses, run `resolve_predictions` to compare it
+   against the actual market price.
+3. `get_accuracy_report` then reports the realized hit-rate (correct / resolved),
+   broken down by timeframe and signal.
 
-1. Store predictions in a database with timestamps
-2. Track actual stock price movements
-3. Compare predictions vs outcomes after timeframe elapses
-4. Calculate realized accuracy: correct predictions / total predictions
+Until you have resolved predictions, the accuracy report honestly states that no
+measured accuracy is available yet.
+
+The `confidence` value on a prediction is **not** an accuracy claim — it reflects how
+strongly the underlying technical models agree.
 
 ## Disclaimers
 
-- **Predictions are for demonstration only**
-- **Historical data is simulated** - no real market history
-- **Not suitable for real trading decisions**
-- **Verify all data with official CSE sources before use**
+- This is a **technical-analysis tool, not financial advice**.
+- Stock-market predictions are inherently uncertain; past results do not guarantee
+  future outcomes.
+- Always verify with official CSE sources and consult a licensed advisor before trading.
 
-## Official Data Sources
+## Official sources
 
-- **CSE Website**: https://www.cse.lk
-- **CSE Market Data**: https://www.cse.lk/market
-- **CSE Listed Companies**: https://www.cse.lk/listed-companies
-
----
-
-*This project is a demonstration MCP server. For real trading, use verified data sources.*
+- CSE website: https://www.cse.lk
+- The `cse.lk/api` endpoints are public but **not officially documented**, so field
+  names may change without notice. Parsing lives in `src/tools/cse-api.ts`.
