@@ -6,6 +6,9 @@ FROM node:22-alpine AS builder
 
 WORKDIR /app
 
+# Build tools required to compile the better-sqlite3 native module
+RUN apk add --no-cache python3 make g++
+
 # Copy package files
 COPY package*.json ./
 COPY tsconfig.json ./
@@ -23,6 +26,9 @@ RUN npm run build
 FROM node:22-alpine AS production
 
 WORKDIR /app
+
+# curl is used by the container HEALTHCHECK below
+RUN apk add --no-cache curl
 
 # Copy built files and dependencies
 COPY --from=builder /app/dist ./dist

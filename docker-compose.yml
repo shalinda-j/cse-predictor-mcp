@@ -14,9 +14,9 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3000
-      - CSE_PREDICTION_THRESHOLD=0.8
-      - CSE_REFRESH_INTERVAL=30
+      - CSE_API_URL=https://www.cse.lk/api
       - CSE_HISTORY_DAYS=365
+      - CSE_DATA_PATH=/app/data
     volumes:
       - ./data:/app/data
     restart: unless-stopped

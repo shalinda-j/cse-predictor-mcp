@@ -38,4 +38,10 @@ coverage/
 # Misc
 *.bak
 *.tmp
-.clinerulesdata/*.db
+.clinerules
+
+# Local databases
+data/
+*.db
+*.sqlite
+*.sqlite3

@@ -1,4 +1,6 @@
 import Database from 'better-sqlite3';
+import { mkdirSync } from 'node:fs';
+import { join } from 'node:path';
 import { logger } from '../utils/logger.js';
 import type { PredictionResult } from '../tools/predictor.js';
 
@@ -25,14 +27,15 @@ export interface AccuracyStats {
   bySignal: Record<string, { total: number; correct: number; accuracy: number }>;
 }
 
-const DB_PATH = './data/predictions.db';
-
 export class PredictionStore {
   private db: Database.Database;
 
-  constructor() {
-    this.db = new Database(DB_PATH);
+  constructor(dataPath: string = './data') {
+    mkdirSync(dataPath, { recursive: true });
+    const dbPath = join(dataPath, 'predictions.db');
+    this.db = new Database(dbPath);
     this.initTables();
+    logger.info('Prediction database at ' + dbPath);
   }
 
   private initTables(): void {
@@ -63,7 +66,6 @@ export class PredictionStore {
         PRIMARY KEY (symbol, date)
       );
     `);
-    logger.info('Database initialized at ' + DB_PATH);
   }
 
   storePrediction(result: PredictionResult): string {

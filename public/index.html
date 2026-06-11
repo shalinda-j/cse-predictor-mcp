@@ -1,30 +1,33 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html>
 <head>
+  <meta charset="utf-8" />
   <title>CSE Predictor MCP API</title>
   <style>
     body { font-family: system-ui; max-width: 800px; margin: 50px auto; padding: 20px; }
     h1 { color: #2563eb; }
     code { background: #f3f4f6; padding: 2px 8px; border-radius: 4px; }
     .endpoint { margin: 10px 0; }
+    .note { color: #6b7280; font-size: 0.9em; }
   </style>
 </head>
 <body>
   <h1>CSE Predictor MCP Server</h1>
-  <p>Colombo Stock Exchange prediction with 80%+ accuracy target</p>
+  <p>Live Colombo Stock Exchange data and technical analysis over the Model Context Protocol.</p>
+  <p class="note">Data is fetched live from the official CSE API — no simulated data. This is a
+  technical-analysis tool, not financial advice.</p>
+
   <h2>API Endpoints</h2>
-  <div class="endpoint"><code>POST /api/index</code> - MCP JSON-RPC endpoint</div>
+  <div class="endpoint"><code>POST /api</code> - MCP JSON-RPC endpoint (tools/list, tools/call)</div>
   <div class="endpoint"><code>GET /api/health</code> - Health check</div>
-  <div class="endpoint"><code>POST /mcp</code> - MCP protocol</div>
-  <h2>Tools Available</h2>
+
+  <h2>Tools</h2>
   <ul>
-    <li>fetch_market_data - Fetch CSE market data</li>
-    <li>get_company_data - Get company data by symbol</li>
-    <li>analyze_stock - Technical analysis</li>
-    <li>predict_stock - Predict stock with 80%+ accuracy</li>
-    <li>predict_market - Market prediction</li>
-    <li>screen_stocks - Screen stocks by criteria</li>
-    <li>get_accuracy_report - Accuracy report</li>
+    <li><code>fetch_market_data</code> - live ASPI, S&amp;P SL20, turnover, status</li>
+    <li><code>get_company_data</code> - live quote for a company</li>
+    <li><code>analyze_stock</code> - technical indicators on real price history</li>
+    <li><code>predict_stock</code> - technical-analysis directional outlook</li>
+    <li><code>screen_stocks</code> - rank traded securities by live quote criteria</li>
   </ul>
   <p><a href="https://github.com/shalinda-j/cse-predictor-mcp">GitHub Repository</a></p>
 </body>

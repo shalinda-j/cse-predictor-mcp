@@ -1,32 +1,30 @@
-﻿/**
+/**
  * Configuration module for CSE Predictor MCP Server
  */
 
 import { z } from 'zod';
 
 const configSchema = z.object({
-  refreshInterval: z.number().default(30),
+  // CSE public API base URL (override only if the CSE changes its API host).
+  cseApiUrl: z.string().default('https://www.cse.lk/api'),
+  // HTTP request timeout for CSE API calls, in milliseconds.
+  requestTimeoutMs: z.number().default(20000),
+  // How many trading days of history to use for analysis.
   historyDays: z.number().default(365),
-  predictionThreshold: z.number().default(0.8),
   verboseLogging: z.boolean().default(false),
-  dataPath: z.string().default('./data'),
-  dataSourceUrl: z.string().optional(),
-  alphaVantageApiKey: z.string().optional(),
-  newsApiKey: z.string().optional()
+  // Path to the SQLite database used for prediction tracking.
+  dataPath: z.string().default('./data')
 });
 
 function loadConfig() {
   const env = process.env;
-  
+
   return configSchema.parse({
-    refreshInterval: parseInt(env.CSE_REFRESH_INTERVAL || '30'),
+    cseApiUrl: env.CSE_API_URL || 'https://www.cse.lk/api',
+    requestTimeoutMs: parseInt(env.CSE_REQUEST_TIMEOUT_MS || '20000'),
     historyDays: parseInt(env.CSE_HISTORY_DAYS || '365'),
-    predictionThreshold: parseFloat(env.CSE_PREDICTION_THRESHOLD || '0.8'),
     verboseLogging: env.CSE_VERBOSE_LOGGING === 'true',
-    dataPath: env.CSE_DATA_PATH || './data',
-    dataSourceUrl: env.CSE_DATA_SOURCE_URL,
-    alphaVantageApiKey: env.ALPHA_VANTAGE_API_KEY,
-    newsApiKey: env.NEWS_API_KEY
+    dataPath: env.CSE_DATA_PATH || './data'
   });
 }
 
