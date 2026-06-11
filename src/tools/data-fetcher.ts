@@ -113,25 +113,31 @@ export class CSEDataFetcher {
     return this.fetchWithCache(`company-${symbol}`, async () => {
       logger.debug(`Fetching real company data for: ${symbol}`);
       const fullSymbol = await this.api.resolveSymbol(symbol);
-      const info = await this.api.getCompanyInfo(fullSymbol);
 
-      if (info.price <= 0) {
+      // The trade summary carries the full quote (incl. open, volume,
+      // market cap); company info adds the sector and is the fallback.
+      const quotes = await this.api.getTradeSummary();
+      const quote = quotes.find((q) => q.symbol.toUpperCase() === fullSymbol.toUpperCase());
+      const info = await this.api.getCompanyInfo(fullSymbol).catch(() => null);
+
+      const price = quote?.price || info?.price || 0;
+      if (price <= 0) {
         throw new Error(`No live price available for ${fullSymbol} (market may be closed or symbol not traded today).`);
       }
 
       return {
-        symbol: info.symbol,
-        name: info.name || fullSymbol,
-        price: info.price,
-        change: info.change,
-        changePercent: info.changePercent,
-        volume: 0,
-        high: info.high,
-        low: info.low,
-        open: info.previousClose, // CSE summary does not expose the open; previous close is the best proxy
-        previousClose: info.previousClose,
-        marketCap: info.marketCap || undefined,
-        sector: info.sector,
+        symbol: fullSymbol,
+        name: quote?.name || info?.name || fullSymbol,
+        price,
+        change: quote?.change ?? info?.change ?? 0,
+        changePercent: quote?.changePercent ?? info?.changePercent ?? 0,
+        volume: quote?.volume ?? 0,
+        high: quote?.high || info?.high || 0,
+        low: quote?.low || info?.low || 0,
+        open: quote?.open || quote?.previousClose || info?.previousClose || 0,
+        previousClose: quote?.previousClose || info?.previousClose || 0,
+        marketCap: quote?.marketCap || info?.marketCap || undefined,
+        sector: info?.sector,
         dataSource: 'cse.lk/api'
       };
     });
@@ -145,20 +151,16 @@ export class CSEDataFetcher {
     return this.fetchWithCache(`history-${symbol}`, async () => {
       logger.debug(`Fetching real historical data for: ${symbol}`);
       const fullSymbol = await this.api.resolveSymbol(symbol);
-      const info = await this.api.getCompanyInfo(fullSymbol);
+      const stockId = await this.api.getStockId(fullSymbol);
 
-      if (!info.id) {
-        throw new Error(`Could not resolve a CSE stock id for ${fullSymbol}; historical data unavailable.`);
-      }
-
-      const points = await this.api.getChartData(info.id);
+      const points = await this.api.getChartData(stockId);
       if (points.length < CSEDataFetcher.MIN_HISTORY_POINTS) {
         throw new Error(
           `Insufficient real historical data for ${fullSymbol} (${points.length} points; need at least ${CSEDataFetcher.MIN_HISTORY_POINTS}).`
         );
       }
 
-      return { symbol: info.symbol, data: points, dataSource: 'cse.lk/api (chart)' };
+      return { symbol: fullSymbol, data: points, dataSource: 'cse.lk/api (chart)' };
     });
   }
 
@@ -179,8 +181,9 @@ export class CSEDataFetcher {
         volume: q.volume,
         high: q.high,
         low: q.low,
-        open: q.previousClose,
+        open: q.open || q.previousClose,
         previousClose: q.previousClose,
+        marketCap: q.marketCap || undefined,
         dataSource: 'cse.lk/api'
       }));
     });

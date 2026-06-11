@@ -34,6 +34,7 @@ export interface MarketStatus {
 }
 
 export interface ShareQuote {
+  id: number; // CSE internal stock id (used for chart/history lookups)
   symbol: string; // full CSE symbol, e.g. "JKH.N0000"
   name: string;
   price: number; // last traded price
@@ -42,8 +43,10 @@ export interface ShareQuote {
   volume: number; // share volume
   high: number;
   low: number;
+  open: number;
   previousClose: number;
   turnover: number;
+  marketCap: number;
 }
 
 export interface CompanyInfo {
@@ -103,6 +106,8 @@ export class CSEApiClient {
 
   /** symbol (base, e.g. "JKH") -> full CSE symbol (e.g. "JKH.N0000") */
   private symbolMap: Map<string, string> | null = null;
+  /** full CSE symbol -> latest quote (includes the numeric stock id) */
+  private quoteMap: Map<string, ShareQuote> = new Map();
 
   constructor(options: CSEApiOptions = {}) {
     this.baseUrl = (options.baseUrl ?? 'https://www.cse.lk/api').replace(/\/$/, '');
@@ -123,10 +128,15 @@ export class CSEApiClient {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
-          'Accept': 'application/json',
-          // The CSE API rejects requests without a browser-like UA.
+          'Accept': 'application/json, text/plain, */*',
+          'Accept-Language': 'en-US,en;q=0.9',
+          // The CSE API sits behind a CDN that rejects non-browser requests;
+          // these headers mirror what the official cse.lk frontend sends.
           'User-Agent':
-            'Mozilla/5.0 (compatible; cse-predictor-mcp/2.0; +https://github.com/shalinda-j/cse-predictor-mcp)'
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+          'Origin': 'https://www.cse.lk',
+          'Referer': 'https://www.cse.lk/',
+          'X-Requested-With': 'XMLHttpRequest'
         },
         body: body.toString(),
         signal: controller.signal
@@ -200,15 +210,19 @@ export class CSEApiClient {
     return rows.map((r) => this.normaliseShare(r));
   }
 
+  // Field names confirmed against real tradeSummary responses:
+  // id, name, symbol, quantity, percentageChange, change, price, previousClose,
+  // high, low, turnover, sharevolume, tradevolume, marketCap, open, closingPrice
   private normaliseShare(r: Record<string, unknown>): ShareQuote {
     const price = num(r.price, r.lastTradedPrice, r.lastTrade, r.closingPrice);
     const change = num(r.change, r.priceChange);
-    let changePercent = num(r.changePercentage, r.percentageChange, r.changePercent);
+    let changePercent = num(r.percentageChange, r.changePercentage, r.changePercent);
     const prevClose = num(r.previousClose, r.closingPrice, price - change);
     if (changePercent === 0 && prevClose !== 0 && change !== 0) {
       changePercent = (change / prevClose) * 100;
     }
     return {
+      id: num(r.id, r.stockId),
       symbol: str(r.symbol, r.code),
       name: str(r.name, r.companyName),
       price,
@@ -217,8 +231,10 @@ export class CSEApiClient {
       volume: num(r.sharevolume, r.shareVolume, r.tradevolume, r.quantity, r.volume),
       high: num(r.high, r.hiTrade, r.highTrade),
       low: num(r.low, r.lowTrade),
+      open: num(r.open, prevClose),
       previousClose: prevClose,
-      turnover: num(r.turnover, r.tradeValue)
+      turnover: num(r.turnover, r.tradeValue),
+      marketCap: num(r.marketCap, r.marketCapitalization)
     };
   }
 
@@ -319,6 +335,7 @@ export class CSEApiClient {
     const map = new Map<string, string>();
     for (const q of quotes) {
       if (!q.symbol) continue;
+      this.quoteMap.set(q.symbol.toUpperCase(), q);
       const base = q.symbol.split('.')[0]?.toUpperCase();
       // Prefer the ".N0000" (voting/ordinary) class when multiple exist.
       if (base && (!map.has(base) || q.symbol.includes('.N0000'))) {
@@ -327,6 +344,19 @@ export class CSEApiClient {
     }
     this.symbolMap = map;
     logger.info(`Built CSE symbol map with ${map.size} tickers`);
+  }
+
+  /**
+   * Resolve the CSE numeric stock id for a symbol. Tries the trade-summary
+   * quote first (the id is included there), then falls back to company info.
+   */
+  async getStockId(symbol: string): Promise<number> {
+    const full = await this.resolveSymbol(symbol);
+    const quote = this.quoteMap.get(full.toUpperCase());
+    if (quote && quote.id > 0) return quote.id;
+    const info = await this.getCompanyInfo(full);
+    if (info.id > 0) return info.id;
+    throw new Error(`Could not resolve a CSE stock id for ${full}; historical data unavailable.`);
   }
 
   // -------------------------------------------------------------------------

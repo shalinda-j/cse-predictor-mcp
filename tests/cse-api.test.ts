@@ -39,13 +39,21 @@ describe('CSEApiClient', () => {
     expect(snp.changePercent).toBeCloseTo(2); // 2 / (102 - 2) * 100
   });
 
-  it('parses the trade summary into share quotes', async () => {
+  it('parses the trade summary into share quotes (real field names)', async () => {
+    // Field names match real cse.lk tradeSummary responses: id, name, symbol,
+    // quantity, percentageChange, change, price, previousClose, high, low,
+    // turnover, sharevolume, tradevolume, marketCap, open, closingPrice.
     vi.stubGlobal(
       'fetch',
       mockFetch({
         tradeSummary: {
           reqTradeSummery: [
-            { symbol: 'JKH.N0000', name: 'JOHN KEELLS HOLDINGS PLC', price: 200, change: 4, percentageChange: 2, sharevolume: 1000, high: 205, low: 198, turnover: 200000 }
+            {
+              id: 234, symbol: 'JKH.N0000', name: 'JOHN KEELLS HOLDINGS PLC',
+              price: 200, change: 4, percentageChange: 2, previousClose: 196,
+              sharevolume: 1000, tradevolume: 55, quantity: 1000,
+              high: 205, low: 198, open: 197, turnover: 200000, marketCap: 295000000000
+            }
           ]
         }
       })
@@ -53,7 +61,21 @@ describe('CSEApiClient', () => {
     const client = new CSEApiClient();
     const quotes = await client.getTradeSummary();
     expect(quotes).toHaveLength(1);
-    expect(quotes[0]).toMatchObject({ symbol: 'JKH.N0000', price: 200, volume: 1000, high: 205, turnover: 200000 });
+    expect(quotes[0]).toMatchObject({
+      id: 234, symbol: 'JKH.N0000', price: 200, changePercent: 2, volume: 1000,
+      high: 205, low: 198, open: 197, previousClose: 196, turnover: 200000, marketCap: 295000000000
+    });
+  });
+
+  it('resolves the stock id directly from the trade summary', async () => {
+    vi.stubGlobal(
+      'fetch',
+      mockFetch({
+        tradeSummary: { reqTradeSummery: [{ id: 234, symbol: 'JKH.N0000', name: 'JOHN KEELLS', price: 200 }] }
+      })
+    );
+    const client = new CSEApiClient();
+    expect(await client.getStockId('JKH')).toBe(234);
   });
 
   it('resolves a base ticker to a full CSE symbol', async () => {
@@ -81,19 +103,23 @@ describe('CSEApiClient', () => {
     await expect(client.resolveSymbol('NOPE')).rejects.toThrow(/not found/i);
   });
 
-  it('normalises company info including the stock id', async () => {
+  it('normalises company info (real response shape)', async () => {
+    // Shape confirmed against the real companyInfoSummery response: the stock
+    // id lives in reqLogo.id and beta in reqSymbolBetaInfo.betaValueSPSL.
     vi.stubGlobal(
       'fetch',
       mockFetch({
         companyInfoSummery: {
-          reqSymbolInfo: { id: 123, symbol: 'JKH.N0000', name: 'JOHN KEELLS HOLDINGS PLC', lastTradedPrice: 200, change: 4, changePercentage: 2, hiTrade: 205, lowTrade: 198, previousClose: 196, marketCap: 1000000, betaValue: 1.1 },
-          reqLogo: { id: 123, path: 'x.png' }
+          reqSymbolInfo: { symbol: 'LOLC.N0000', name: 'L O L C HOLDINGS PLC', lastTradedPrice: 546.5, change: -2.5, changePercentage: -0.455, marketCap: 259696800000 },
+          reqLogo: { id: 2168, path: 'upload_logo/378_1601611239.jpeg' },
+          reqSymbolBetaInfo: { betaValueSPSL: 1.0227 }
         }
       })
     );
     const client = new CSEApiClient();
-    const info = await client.getCompanyInfo('JKH.N0000');
-    expect(info).toMatchObject({ id: 123, symbol: 'JKH.N0000', price: 200, previousClose: 196, marketCap: 1000000 });
+    const info = await client.getCompanyInfo('LOLC.N0000');
+    expect(info).toMatchObject({ id: 2168, symbol: 'LOLC.N0000', price: 546.5, marketCap: 259696800000, beta: 1.0227 });
+    expect(info.changePercent).toBeCloseTo(-0.455);
   });
 
   it('parses chart data into sorted OHLC points', async () => {

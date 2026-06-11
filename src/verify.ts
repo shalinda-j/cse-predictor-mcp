@@ -83,19 +83,19 @@ async function main(): Promise<void> {
     return `${base} -> ${full}`;
   });
 
-  // Company info (price + stock id needed for charts).
-  let stockId = 0;
+  // Company info (price, market cap, sector).
   await check('companyInfoSummery', async () => {
     const sym = sampleFullSymbol || (await api.resolveSymbol('JKH'));
     const info = await api.getCompanyInfo(sym);
     need(info.price > 0, `no price for ${sym} (market may be closed)`);
-    stockId = info.id;
     return `${info.symbol} price=${info.price} id=${info.id} marketCap=${info.marketCap}`;
   });
 
   // Historical OHLC (drives all technical analysis).
   await check('companyChartDataByStock (history)', async () => {
-    need(stockId > 0, 'no stock id resolved from companyInfoSummery');
+    const sym = sampleFullSymbol || (await api.resolveSymbol('JKH'));
+    const stockId = await api.getStockId(sym);
+    need(stockId > 0, `no stock id resolved for ${sym}`);
     const points = await api.getChartData(stockId);
     need(
       points.length >= CSEDataFetcher.MIN_HISTORY_POINTS,
